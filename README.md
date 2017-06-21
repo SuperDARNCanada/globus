@@ -35,7 +35,7 @@ and the uuid of your endpoint on line 'PERSONAL_UUID ='
 click on the endpoint then you'll see uuid in the information that pops up)
 4) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
 5) Now run the script with some arguments, such as:
-"./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas" /path/to/endpoint/dir
+"./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/endpoint/dir"
 it will ask you to log into globus to authenticate, give you a token to paste into the cmd line,
 then it will save a refresh token to a file on your computer to use for automatic login from now on.
 
