@@ -66,7 +66,7 @@ TRANSFER_RT_FILENAME = HOME + "/.globus_transfer_rt"
 
 # UUID of your endpoint, retrieve from endpoint information at: https://www.globus.org/app/endpoints
 PERSONAL_UUID = ''
-# Client ID retrieved from https://auth.globus.oorg/v2/web/developers
+# Client ID retrieved from https://auth.globus.org/v2/web/developers
 CLIENT_ID = ''
 
 
