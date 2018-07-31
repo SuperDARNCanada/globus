@@ -1,33 +1,18 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 """@package synchronizer
-Last modification 201706 by Kevin Krieger
+Last modification 201807 by Kevin Krieger
 
 This script is designed to log on to the University of Saskatchewan globus
 SuperDARN mirror in order to check for and download new files for a specific pattern and data type 
 
 IMPORTANT: Before this script is run, there are a set of instructions which must be followed:
 ***
-1) Go to https://auth.globus.org/v2/web/developers
-    a) Add a project named 'SuperDARN' or something similar
-    b) Add an app to that project called 'sync_radar_data'
-    c) Add three scopes to the app:
-i) urn:globus:auth:scope:transfer.api.globus.org:all (Transfer files using Globus Transfer)
-ii) openid (Know who you are in Globus.)
-iii) email (Know your email address.)
-    d) The redirect url is : https://auth.globus.org/v2/web/auth-code
-    e) Click the "Native App" checkbox
-    f) Click 'create app'
-    g) Now you have a 'client ID' available to you, used in the script sort of as your user name.
 
-2) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
-2.1) Install the globus sdk for python: sudo pip2 install globus-sdk OR sudo pip install globus-sdk
-3) Edit the script to include your client_id on line 'CLIENT_ID ='
-and the uuid of your endpoint on line 'PERSONAL_UUID ='
-(found at "Endpoints" link of globus.org when you're logged in,
-click on the endpoint then you'll see uuid in the information that pops up)
-4) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
-5) Now run the script with some arguments, such as:
+1) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
+1.1) Install the globus sdk for python: sudo pip2 install globus-sdk OR sudo pip install globus-sdk
+2) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
+3) Now run the script with some arguments, such as:
 "./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/endpoint/dir"
 it will ask you to log into globus to authenticate, give you a token to paste into the cmd line,
 then it will save a refresh token to a file on your computer to use for automatic login from now on.
@@ -64,10 +49,18 @@ HOME = expanduser("~")
 # for automatic authentication
 TRANSFER_RT_FILENAME = HOME + "/.globus_transfer_rt"
 
-# UUID of your endpoint, retrieve from endpoint information at: https://www.globus.org/app/endpoints
-PERSONAL_UUID = ''
-# Client ID retrieved from https://auth.globus.org/v2/web/developers
-CLIENT_ID = ''
+# UUID of your endpoint, retrieve from endpoint info at: https://www.globus.org/app/endpoints
+# Or from the filesystem that globusconnectpersonal is installed on. Note that the following
+# line is for LINUX operating systems and may be different for MAC OS.
+# Note: this assumes you are running globusconnectpersonal & this script on the same filesystem
+PERSONAL_UUID_FILENAME = HOME + "/.globusonline/lta/client-id.txt"
+
+if isfile(PERSONAL_UUID_FILENAME):
+    with open(PERSONAL_UUID_FILENAME) as f:
+        PERSONAL_UUID = f.readline()
+
+# Client ID retrieved from https://auth.globus.oorg/v2/web/developers
+CLIENT_ID = '84d0b918-f49a-4136-a115-4206dafeba8a'
 
 
 def month_year_iterator(start_month, start_year, end_month, end_year):
@@ -120,14 +113,16 @@ class Synchronizer(object):
         parser.add_argument("-t", "--data_type",
                             help="One of {} Default: 'raw'".format(self.possible_data_types),
                             default='raw')
+
         parser.add_argument("sync_local_dir", help="Path on endpoint to sync data to")
         args = parser.parse_args()
+
         self.sync_year = args.sync_year
         self.sync_month = "{:02d}".format(args.sync_month)
         self.sync_pattern = args.sync_pattern
         self.data_type = args.data_type
         self.sync_local_dir = args.sync_local_dir
-
+        self.mirror_root_dir = "~/chroot/sddata"
         self.sanity_check()
 
         # Get a transfer client
@@ -148,7 +143,10 @@ class Synchronizer(object):
             sys.exit("Data type can only be one of {}. Exiting".format(self.possible_data_types))
         # Note we cannot check the path here with typical os.is_path
         # since we may be running this script on a different machine than the destination endpoint,
-        # therefore the script will fail with exception from globus if it doesn't exist
+        # therefore the script will fail with exception from globus if it doesn't exist.
+        # Note that this means that the PERSONAL_UUID retreival would have to change from default
+        # since it is currently retreived from the filesystem (assumes this is running on the same
+        # filesystem that globusconnectpersonal is installed on)
 
     def synchronize(self):
         """ Do synchronization of files from the globus SuperDARN mirror to the user's endpoint """
@@ -157,9 +155,10 @@ class Synchronizer(object):
         try:
             # You absolutely need the '~' in front of the root of the path for the patterns to work.
             # This isn't obvious from documentation.
-            listing_path = "~/chroot/sddata/{}/{}/{}/".format(self.data_type,
-                                                              self.sync_year,
-                                                              self.sync_month)
+            listing_path = "{}/{}/{}/{}/".format(self.mirror_root_dir,
+                                                 self.data_type,
+                                                 self.sync_year,
+                                                 self.sync_month)
             # The listing pattern is handled by the python globus sdk
             listing_pattern = "name:~*{}*".format(self.sync_pattern)
             if 'raw' in self.data_type:
@@ -207,6 +206,19 @@ class Synchronizer(object):
             print("Globus Timeout error - REST request timed out.")
         except globus_sdk.NetworkError:
             print("Network error")
+    
+    def get_first_globus_connect_personal_uuid(self):
+        """ Will search user's endpoints and retrieve the UUID of the first active globus connect 
+        personal endpoint. 
+        
+        :returns: UUID of first active globus connect personal endpoint """
+
+        gcp_eps = self.transfer_client.endpoint_search(filter_scope='my-gcp-endpoints')
+        if gcp_eps is not None:
+            for ep in gcp_eps:
+                if ep['activated'] is True and ep['gcp_connected'] is True:
+                    return ep['id']
+            sys.exit("No endpoint found for Globus Connect Personal endpoint. Exiting")
 
     def get_superdarn_mirror_uuid(self):
         """ Will search endpoints and retrieve the UUID of the SuperDARN mirror endpoint. 
@@ -293,7 +305,7 @@ class Synchronizer(object):
         else:
             return globus_sdk.TransferClient(authorizer=self.get_auth_with_login())
 
-    def sync_files_from_list(self, files_list, source_uuid=None, dest_uuid=PERSONAL_UUID):
+    def sync_files_from_list(self, files_list, source_uuid=None, dest_uuid=None):
         """ Takes a list of files to synchronize as well as source and destination endpoint UUIDs. 
         It is hard coded to place the files in the correct YYYY/MM directories on the SuperDARN 
         globus mirror, the default source and destination UUIDs are fine for 99% of usage. 
@@ -303,6 +315,9 @@ class Synchronizer(object):
         :param dest_uuid: UUID of the destination endpoint for the files
         :returns: Globus SDK transfer result object """
 
+        if dest_uuid is None:
+            # dest_uuid = self.get_first_globus_connect_personal_uuid()
+            dest_uuid = PERSONAL_UUID
         if source_uuid is None:
             source_uuid = self.mirror_uuid
         function_name = inspect.currentframe().f_code.co_name
