@@ -9,6 +9,7 @@ SuperDARN mirror in order to check for and download new files for a specific pat
 IMPORTANT: Before this script is run, there are a set of instructions which must be followed:
 ***
 
+0) Use python 3 for this script
 1) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
 1.1) Install the globus sdk for python: sudo pip2 install globus-sdk OR sudo pip install globus-sdk
 2) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
@@ -37,46 +38,32 @@ arguments (for example, if the year is in the future, or the month is
 not 1-12) then it will fail with an error message.
 """
 
-import globus_sdk
 import inspect
 from datetime import datetime
 from os.path import expanduser, isfile
 import sys
 import argparse
+import globus_sdk
 
-HOME = expanduser("~")
+USER_HOME_DIRECTORY = expanduser("~")
 # The following is a path to a file that contains the globus transfer refresh tokens used
 # for automatic authentication
-TRANSFER_RT_FILENAME = HOME + "/.globus_transfer_rt"
+TRANSFER_RT_FILENAME = USER_HOME_DIRECTORY + "/.globus_transfer_rt"
 
 # UUID of your endpoint, retrieve from endpoint info at: https://www.globus.org/app/endpoints
 # Or from the filesystem that globusconnectpersonal is installed on. Note that the following
 # line is for LINUX operating systems and may be different for MAC OS.
 # Note: this assumes you are running globusconnectpersonal & this script on the same filesystem
-PERSONAL_UUID_FILENAME = HOME + "/.globusonline/lta/client-id.txt"
+PERSONAL_UUID_FILENAME = USER_HOME_DIRECTORY + "/.globusonline/lta/client-id.txt"
 
 if isfile(PERSONAL_UUID_FILENAME):
     with open(PERSONAL_UUID_FILENAME) as f:
         PERSONAL_UUID = f.readline()
+else:
+    raise FileNotFoundError("Client ID file not found: {}".format(PERSONAL_UUID_FILENAME))
 
 # Client ID retrieved from https://auth.globus.oorg/v2/web/developers
 CLIENT_ID = '84d0b918-f49a-4136-a115-4206dafeba8a'
-
-
-def month_year_iterator(start_month, start_year, end_month, end_year):
-    """ Found on stackoverflow by user S.Lott.
-    
-    :param start_month: the month you wish to start your iterator on, integer
-    :param start_year: the year you wish to start your iterator on, integer
-    :param end_month: the month you wish to end your iterator on, integer
-    :param end_year: the year you wish to end your iterator on, integer
-    :returns: An iterator over a set of years and months
-    """
-    ym_start = 12 * start_year + start_month - 1
-    ym_end = 12 * end_year + end_month - 1
-    for ym in range(ym_start, ym_end):
-        y, m = divmod(ym, 12)
-        yield y, m + 1
 
 
 class Synchronizer(object):
@@ -94,7 +81,8 @@ class Synchronizer(object):
         """
         self.cur_year = datetime.now().year
         self.cur_month = datetime.now().month
-        self.possible_data_types = ['raw', 'dat', 'fit', 'map', 'grid', 'summary']
+        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf25', 'fitacf30',
+                                    'map', 'grid', 'summary']
 
         # CLIENT_ID and CLIENT_SECRET are retrieved from the "Manage Apps" section of
         # https://auth.globus.org/v2/web/developers for this app. transfer_rt is retrieved
@@ -104,16 +92,27 @@ class Synchronizer(object):
         self.TRANSFER_RT = transfer_rt
         self.transfer_rt_filename = TRANSFER_RT_FILENAME
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-y", "--sync_year", help="Year you wish to sync data for",
-                            type=int, default=self.cur_year)
-        parser.add_argument("-m", "--sync_month", help="Month you wish to sync data for",
-                            type=int, default=self.cur_month)
-        parser.add_argument("-p", "--sync_pattern", help="Sync pattern, default: '*'", default='*')
-        parser.add_argument("-t", "--data_type",
-                            help="One of {} Default: 'raw'".format(self.possible_data_types),
-                            default='raw')
-
+        parser = argparse.ArgumentParser(description="This script will sync a specified year, month"
+                                                     "and data type to your specified local dir.",
+                                         usage=""" Examples
+sync_radar_data_globus.py /home/username/current_month_rawacfs/
+sync_radar_data_globus.py -y 2016 -m 05 /home/username/201605_rawacfs/
+sync_radar_data_globus.py -y 2004 -m 02 -t dat /home/username/200402_dat_files/
+sync_radar_data_globus.py -y 2014 -m 12 -p 20141201*sas /home/username/20141201_sas_rawacfs/
+sync_radar_data_globus.py -p rkn /home/username/cur_month_rkn_rawacfs/
+sync_radar_data_globus.py -y 2004 -m 02 -t dat -p 20040212 /home/username/20040212_dat_files/""",
+                                         formatter_class=argparse.RawTextHelpFormatter)
+        parser.add_argument("-y", "--sync_year", type=int, default=self.cur_year,
+                            help="Year you wish to sync data for. Default is current year")
+        parser.add_argument("-m", "--sync_month", type=int, default=self.cur_month,
+                            help="Month you wish to sync data for. Default is current month")
+        parser.add_argument("-p", "--sync_pattern", default='*',
+                            help="""Sync pattern. default: '*'
+Examples:
+1)'-p=20180101' Download January 1st 2018 files (requires inputting -y and -m as 2018 and 01)
+2)'-p=ade' Download ade files for specified year and month
+3)'-p=2010503*kod.c' Download all kod.c files from 20160503""")
+        parser.add_argument("-t", "--data_type", choices=self.possible_data_types, default='raw')
         parser.add_argument("sync_local_dir", help="Path on endpoint to sync data to")
         args = parser.parse_args()
 
@@ -133,19 +132,16 @@ class Synchronizer(object):
         """ Check arguments: year, month, data type. Kills script if something is
         wrong. """
         if int(self.sync_year) == self.cur_year and int(self.sync_month) > self.cur_month:
-            sys.exit("Year {} and month {} is in the future. Exiting".format(self.sync_year,
-                                                                             self.sync_month))
+            raise ValueError("Sync month \"{}\" is in the future.".format(self.sync_month))
         if int(self.sync_year) > self.cur_year:
-            sys.exit("Sync year \"{}\" is in the future. Exiting".format(self.sync_year))
+            raise ValueError("Sync year \"{}\" is in the future.".format(self.sync_year))
         if int(self.sync_month) < 1 or int(self.sync_month) > 12:
-            sys.exit("Sync month \"{}\" invalid. Exiting".format(self.sync_month))
-        if self.data_type not in self.possible_data_types:
-            sys.exit("Data type can only be one of {}. Exiting".format(self.possible_data_types))
+            raise ValueError("Sync month \"{}\" invalid.".format(self.sync_month))
         # Note we cannot check the path here with typical os.is_path
         # since we may be running this script on a different machine than the destination endpoint,
         # therefore the script will fail with exception from globus if it doesn't exist.
-        # Note that this means that the PERSONAL_UUID retreival would have to change from default
-        # since it is currently retreived from the filesystem (assumes this is running on the same
+        # Note that this means that the PERSONAL_UUID retrieval would have to change from default
+        # since it is currently retrieved from the filesystem (assumes this is running on the same
         # filesystem that globusconnectpersonal is installed on)
 
     def synchronize(self):
@@ -155,10 +151,10 @@ class Synchronizer(object):
         try:
             # You absolutely need the '~' in front of the root of the path for the patterns to work.
             # This isn't obvious from documentation.
-            listing_path = "{}/{}/{}/{}/".format(self.mirror_root_dir,
-                                                 self.data_type,
-                                                 self.sync_year,
-                                                 self.sync_month)
+            listing_path = "{root}/{type}/{year}/{month}/".format(root=self.mirror_root_dir,
+                                                                  type=self.data_type,
+                                                                  year=self.sync_year,
+                                                                  month=self.sync_month)
             # The listing pattern is handled by the python globus sdk
             listing_pattern = "name:~*{}*".format(self.sync_pattern)
             if 'raw' in self.data_type:
@@ -316,7 +312,6 @@ class Synchronizer(object):
         :returns: Globus SDK transfer result object """
 
         if dest_uuid is None:
-            # dest_uuid = self.get_first_globus_connect_personal_uuid()
             dest_uuid = PERSONAL_UUID
         if source_uuid is None:
             source_uuid = self.mirror_uuid
