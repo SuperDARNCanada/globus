@@ -15,26 +15,11 @@ setup key" and "Download & Install Globus Connect Personal")
 
 
 Now to get these scripts working you need to do the following:
-1) Go to https://auth.globus.org/v2/web/developers
-    a) Add a project named 'SuperDARN' or something similar
-    b) Add an app to that project called 'sync_radar_data'
-    c) Add three scopes to the app:
-i) urn:globus:auth:scope:transfer.api.globus.org:all (Transfer files using Globus Transfer)
-ii) openid (Know who you are in Globus.)
-iii) email (Know your email address.)
-    d) The redirect url is : https://auth.globus.org/v2/web/auth-code
-    e) Click the "Native App" checkbox
-    f) Click 'create app'
-    g) Now you have a 'client ID' available to you, used in the script sort of as your user name.
-
+1) Use python 3
 2) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
 2.1) Install the globus sdk for python: sudo pip2 install globus-sdk OR sudo pip install globus-sdk
-3) Edit the script to include your client_id on line 'CLIENT_ID ='
-and the uuid of your endpoint on line 'PERSONAL_UUID ='
-(found at "Endpoints" link of globus.org when you're logged in,
-click on the endpoint then you'll see uuid in the information that pops up)
-4) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
-5) Now run the script with some arguments, such as:
+3) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
+4) Now run the script with some arguments, such as:
 "./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/endpoint/dir"
 it will ask you to log into globus to authenticate, give you a token to paste into the cmd line,
 then it will save a refresh token to a file on your computer to use for automatic login from now on.
