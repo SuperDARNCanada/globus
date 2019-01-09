@@ -16,11 +16,13 @@ setup key" and "Download & Install Globus Connect Personal")
 
 
 Now to get these scripts working you need to do the following:
-1) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
-2) Install the globus sdk for python: sudo pip2 install globus-sdk OR sudo pip install globus-sdk
+
+1) Use python 3
+2) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
+2.1) Install the globus sdk for python: sudo pip3 install globus-sdk OR sudo pip install globus-sdk
 3) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
 4) Now run the script with some arguments, such as:
-"./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/your/local/computer/dir/"
+"./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/endpoint/dir"
 it will ask you to log into globus to authenticate, give you a token to paste into the cmd line,
 then it will save a refresh token to a file on your computer to use for automatic login from now on.
 
