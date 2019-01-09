@@ -320,14 +320,14 @@ Examples:
                                                 label=function_name, sync_level="checksum",
                                                 notify_on_succeeded=False,
                                                 notify_on_failed=True)
-        source_dir_prefix = "{}/{}/{}/{}/".format(self.mirror_root_dir,
-						  self.data_type,
-                                                  self.sync_year,
-                                                  self.sync_month)
+        source_dir_prefix = "{root}/{type}/{year}/{month}/".format(root=self.mirror_root_dir,
+								   type=self.data_type,
+								   year=self.sync_year,
+								   month=self.sync_month)
         dest_dir_prefix = self.sync_local_dir
         for data_file in files_list:
-            transfer_data.add_item("{}/{}".format(source_dir_prefix, data_file),
-                                   "{}/{}".format(dest_dir_prefix, data_file))
+            transfer_data.add_item("{source_dir}/{file_name}".format(source_dir=source_dir_prefix, file_name=data_file),
+                                   "{dest_dir}/{file_name}".format(dest_dir=dest_dir_prefix, file_name=data_file))
         transfer_result = self.transfer_client.submit_transfer(transfer_data)
         return transfer_result
 
