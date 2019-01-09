@@ -11,7 +11,7 @@ IMPORTANT: Before this script is run, there are a set of instructions which must
 
 0) Use python 3 for this script
 1) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
-1.1) Install the globus sdk for python: sudo pip2 install globus-sdk OR sudo pip install globus-sdk
+1.1) Install the globus sdk for python: sudo pip3 install globus-sdk
 2) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
 3) Now run the script with some arguments, such as:
 "./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/your/local/endpoint/dir/"
