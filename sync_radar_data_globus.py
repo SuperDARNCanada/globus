@@ -44,6 +44,7 @@ from os.path import expanduser, isfile
 import sys
 import argparse
 import globus_sdk
+import time
 
 USER_HOME_DIRECTORY = expanduser("~")
 # The following is a path to a file that contains the globus transfer refresh tokens used
@@ -121,7 +122,7 @@ Examples:
         self.sync_pattern = args.sync_pattern
         self.data_type = args.data_type
         self.sync_local_dir = args.sync_local_dir
-        self.mirror_root_dir = "~/chroot/sddata"
+        self.mirror_root_dir = "/chroot/sddata"
         self.sanity_check()
 
         # Get a transfer client
@@ -171,8 +172,37 @@ Examples:
                 pass
             else:
                 pass
-            listing = self.transfer_client.operation_ls(self.mirror_uuid, path=listing_path,
-                                                        filter=listing_pattern)
+            print("Listing path: {path} on endpoint: {endpoint} with pattern: {pattern}".format(
+                path=listing_path, endpoint=self.mirror_uuid, pattern=listing_pattern))
+            listing_succeeded = False
+            operation_ls_retries = 10 
+            attempts = 0
+            listing = []
+            listing_times = []
+
+            while attempts < operation_ls_retries:
+                try:
+                    listing_times.append(time.time())
+                    print("Attempt: {}".format(attempts)),
+                    listing = self.transfer_client.operation_ls(self.mirror_uuid, path=listing_path,
+                                                                filter=listing_pattern)
+                    listing_succeeded = True
+                    break
+                except globus_sdk.GlobusAPIError:
+                    print("... failed")
+                    listing_succeeded = False
+                    attempts += 1
+
+            for index, listing_time in enumerate(listing_times):
+                if index == 0:
+                    print(listing_time)
+                    continue
+                else:
+                    print(listing_time-listing_times[index-1])
+
+            if not listing_succeeded:
+                sys.exit("Listing failed after {} attempts! Exiting".format(attempts))
+
             files_to_sync = [entry['name'] for entry in listing]
             # Max duration of transfer is set to 30 seconds per file here to give plenty of time.
             # A more proper way to do this would be to get the sizes of the files to transfer
@@ -320,10 +350,8 @@ Examples:
                                                 label=function_name, sync_level="checksum",
                                                 notify_on_succeeded=False,
                                                 notify_on_failed=True)
-        source_dir_prefix = "{}/{}/{}/{}/".format(self.mirror_root_dir,
-						  self.data_type,
-                                                  self.sync_year,
-                                                  self.sync_month)
+        source_dir_prefix = "{}/{}/{}/{}/".format(self.mirror_root_dir, self.data_type,
+                                                  self.sync_year, self.sync_month)
         dest_dir_prefix = self.sync_local_dir
         for data_file in files_list:
             transfer_data.add_item("{}/{}".format(source_dir_prefix, data_file),
