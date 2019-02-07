@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 """@package synchronizer
-Last modification 201807 by Kevin Krieger
+Last modification 201902 by Kevin Krieger
 
 This script is designed to log on to the University of Saskatchewan globus
 SuperDARN mirror in order to check for and download new files for a specific pattern and data type 
@@ -38,12 +38,20 @@ arguments (for example, if the year is in the future, or the month is
 not 1-12) then it will fail with an error message.
 """
 
+from __future__ import print_function
 import inspect
 from datetime import datetime
 from os.path import expanduser, isfile
 import sys
 import argparse
 import globus_sdk
+import time
+import sys
+
+if sys.version_info >= (3, 0):
+    PYTHON3=True
+else:
+    PYTHON3=False
 
 USER_HOME_DIRECTORY = expanduser("~")
 # The following is a path to a file that contains the globus transfer refresh tokens used
@@ -121,7 +129,9 @@ Examples:
         self.sync_pattern = args.sync_pattern
         self.data_type = args.data_type
         self.sync_local_dir = args.sync_local_dir
-        self.mirror_root_dir = "~/chroot/sddata"
+        # **Note** for some globus instances a tilde is required in front of the forward slash
+        # for the mirror_root_dir, example: "~/chroot/sddata"
+        self.mirror_root_dir = "/chroot/sddata"
         self.sanity_check()
 
         # Get a transfer client
@@ -171,8 +181,42 @@ Examples:
                 pass
             else:
                 pass
-            listing = self.transfer_client.operation_ls(self.mirror_uuid, path=listing_path,
-                                                        filter=listing_pattern)
+            print("Listing path: {path} on endpoint: {endpoint} with pattern: {pattern}".format(
+                path=listing_path, endpoint=self.mirror_uuid, pattern=listing_pattern))
+            print("Note: This can take several minutes")
+            listing_succeeded = False
+
+            # The number of retries required to reliably succeed, on cedar's endpoint, to get
+            # around the timeout issue.
+            operation_ls_retries = 15
+            attempts = 0
+            listing = []
+            listing_times = []
+
+            while attempts < operation_ls_retries:
+                try:
+                    listing_times.append(time.time())
+                    if PYTHON3:
+                        print(".", end="", flush=True)
+                    else:
+                        print("."),
+                        sys.stdout.flush()
+
+                    listing = self.transfer_client.operation_ls(self.mirror_uuid, path=listing_path,
+                                                                filter=listing_pattern)
+                    listing_succeeded = True
+                    break
+                except globus_sdk.GlobusAPIError:
+                    listing_succeeded = False
+                    attempts += 1
+                except globus_sdk.GlobusTimeoutError:
+                    listing_succeeded = False
+                    attempts += 1
+
+            print("")
+            if not listing_succeeded:
+                sys.exit("Listing failed after {} attempts! Exiting".format(attempts))
+
             files_to_sync = [entry['name'] for entry in listing]
             # Max duration of transfer is set to 30 seconds per file here to give plenty of time.
             # A more proper way to do this would be to get the sizes of the files to transfer
@@ -320,6 +364,7 @@ Examples:
                                                 label=function_name, sync_level="checksum",
                                                 notify_on_succeeded=False,
                                                 notify_on_failed=True)
+
         source_dir_prefix = "{root}/{type}/{year}/{month}/".format(root=self.mirror_root_dir,
 								   type=self.data_type,
 								   year=self.sync_year,
