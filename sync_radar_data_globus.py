@@ -11,7 +11,7 @@ IMPORTANT: Before this script is run, there are a set of instructions which must
 
 0) Use python 3 for this script
 1) Install pip if you don't have it: on OpenSuSe: sudo zypper in python-pip
-1.1) Install the globus sdk for python: sudo pip2 install globus-sdk OR sudo pip install globus-sdk
+1.1) Install the globus sdk for python: sudo pip3 install globus-sdk
 2) Now make sure the script is runnable: chmod +x sync_radar_data_globus.py
 3) Now run the script with some arguments, such as:
 "./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/your/local/endpoint/dir/"
@@ -364,12 +364,15 @@ Examples:
                                                 label=function_name, sync_level="checksum",
                                                 notify_on_succeeded=False,
                                                 notify_on_failed=True)
-        source_dir_prefix = "{}/{}/{}/{}/".format(self.mirror_root_dir, self.data_type,
-                                                  self.sync_year, self.sync_month)
+
+        source_dir_prefix = "{root}/{type}/{year}/{month}/".format(root=self.mirror_root_dir,
+								   type=self.data_type,
+								   year=self.sync_year,
+								   month=self.sync_month)
         dest_dir_prefix = self.sync_local_dir
         for data_file in files_list:
-            transfer_data.add_item("{}/{}".format(source_dir_prefix, data_file),
-                                   "{}/{}".format(dest_dir_prefix, data_file))
+            transfer_data.add_item("{source_dir}/{file_name}".format(source_dir=source_dir_prefix, file_name=data_file),
+                                   "{dest_dir}/{file_name}".format(dest_dir=dest_dir_prefix, file_name=data_file))
         transfer_result = self.transfer_client.submit_transfer(transfer_data)
         return transfer_result
 
