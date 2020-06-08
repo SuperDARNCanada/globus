@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 """@package synchronizer
-Last modification 201902 by Kevin Krieger
+Last modification 202006 by Kevin Krieger, with help from Dr. David Themens who tested on Windows
 
 This script is designed to log on to the University of Saskatchewan globus
 SuperDARN mirror in order to check for and download new files for a specific pattern and data type 
@@ -59,9 +59,11 @@ USER_HOME_DIRECTORY = expanduser("~")
 TRANSFER_RT_FILENAME = USER_HOME_DIRECTORY + "/.globus_transfer_rt"
 
 # UUID of your endpoint, retrieve from endpoint info at: https://www.globus.org/app/endpoints
-# Or from the filesystem that globusconnectpersonal is installed on. Note that the following
-# line is for LINUX operating systems and may be different for MAC OS.
+# Or from the filesystem that globusconnectpersonal is installed on.
 # Note: this assumes you are running globusconnectpersonal & this script on the same filesystem
+# For Windows, use the following:
+# PERSONAL_UUID_FILENAME = USER_HOME_DIRECTORY + "\AppData\Local\Globus Connect\client-id.txt"
+# For Linux, use the following:
 PERSONAL_UUID_FILENAME = USER_HOME_DIRECTORY + "/.globusonline/lta/client-id.txt"
 
 if isfile(PERSONAL_UUID_FILENAME):
@@ -89,7 +91,7 @@ class Synchronizer(object):
         """
         self.cur_year = datetime.now().year
         self.cur_month = datetime.now().month
-        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf25', 'fitacf30',
+        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf25', 'fitacf_30',
                                     'map', 'grid', 'summary']
 
         # CLIENT_ID and CLIENT_SECRET are retrieved from the "Manage Apps" section of
@@ -112,6 +114,7 @@ sync_radar_data_globus.py -y 2004 -m 02 -t dat -p 20040212 /home/username/200402
                                          formatter_class=argparse.RawTextHelpFormatter)
         parser.add_argument("-y", "--sync_year", type=int, default=self.cur_year,
                             help="Year you wish to sync data for. Default is current year")
+        parser.add_argument("-s", "--sync_station", type=str, help="Which radar to download")
         parser.add_argument("-m", "--sync_month", type=int, default=self.cur_month,
                             help="Month you wish to sync data for. Default is current month")
         parser.add_argument("-p", "--sync_pattern", default='*',
@@ -124,6 +127,7 @@ Examples:
         parser.add_argument("sync_local_dir", help="Path on endpoint to sync data to")
         args = parser.parse_args()
 
+        self.radar_code = args.sync_station
         self.sync_year = args.sync_year
         self.sync_month = "{:02d}".format(args.sync_month)
         self.sync_pattern = args.sync_pattern
@@ -131,7 +135,10 @@ Examples:
         self.sync_local_dir = args.sync_local_dir
         # **Note** for some globus instances a tilde is required in front of the forward slash
         # for the mirror_root_dir, example: "~/chroot/sddata"
-        self.mirror_root_dir = "/chroot/sddata"
+        if self.data_type in ["raw", "dat", "fit"]:
+            self.mirror_root_dir = "/chroot/sddata"
+        else:
+            self.mirror_root_dir = "~/local_data"
         self.sanity_check()
 
         # Get a transfer client
@@ -172,7 +179,7 @@ Examples:
             elif 'dat' in self.data_type:
                 listing_pattern = "name:~*{}*dat.bz2".format(self.sync_pattern)
             elif 'fit' in self.data_type:
-                listing_pattern = "name:~*{}*fitacf.gz".format(self.sync_pattern)
+                listing_pattern = "name:~*{}*{}.fitacf.bz2".format(self.sync_pattern, self.radar_code)
             elif 'map' in self.data_type:
                 listing_pattern = "name:~*{}*map".format(self.sync_pattern)
             elif 'grid' in self.data_type:
@@ -366,13 +373,15 @@ Examples:
                                                 notify_on_failed=True)
 
         source_dir_prefix = "{root}/{type}/{year}/{month}/".format(root=self.mirror_root_dir,
-								   type=self.data_type,
-								   year=self.sync_year,
-								   month=self.sync_month)
+                                                                   type=self.data_type,
+                                                                   year=self.sync_year,
+                                                                   month=self.sync_month)
         dest_dir_prefix = self.sync_local_dir
         for data_file in files_list:
-            transfer_data.add_item("{source_dir}/{file_name}".format(source_dir=source_dir_prefix, file_name=data_file),
-                                   "{dest_dir}/{file_name}".format(dest_dir=dest_dir_prefix, file_name=data_file))
+            transfer_data.add_item("{source_dir}/{file_name}".format(source_dir=source_dir_prefix,
+                                                                     file_name=data_file),
+                                   "{dest_dir}/{file_name}".format(dest_dir=dest_dir_prefix,
+                                                                   file_name=data_file))
         transfer_result = self.transfer_client.submit_transfer(transfer_data)
         return transfer_result
 
