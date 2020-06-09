@@ -46,13 +46,16 @@ Now to get these scripts working you need to do the following:
     1. OpenSuSe: `chmod +x sync_radar_data_globus.py`
     1. Windows: From the cmd.exe launcher, python scripts should already be executable
 1. Now run the script with some arguments, such as:
+    1. Linux: `/sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/endpoint/dir`
+    1. Windows: `py sync_radar_data_globus.py -y 2019 -m 03 -p 20190304*rkn /C/Users/Kevin/Documents/`
 
-```
-./sync_radar_data_globus.py -y 2007 -m 01 -p 20070101*sas /path/to/endpoint/dir
-```
+*** NOTE *** On Windows, by default, the only directory you can write to is your home `Documents`
+directory, such as `/C/Users/Kevin/Documents/`. To change this, or add new directories, you must
+do so in the configuration of globusconnectpersonal.
 
-it will ask you to log into Globus to authenticate, give you a token to paste into the cmd line,
-then it will save a refresh token to a file on your computer to use for automatic login from now on.
+Running the script for the first time, it will ask you to log into Globus to authenticate, 
+give you a token to paste into the cmd line, then it will save a refresh token to a file on your 
+computer to use for automatic login from now on.
 
 ** Note ** If you have an old transfer token file (`~/.globus_tranfser_rt`) and you try to run this
 script, it may come up with an authentication error. In this instance you should remove the old
