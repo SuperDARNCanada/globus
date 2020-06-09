@@ -2,9 +2,10 @@
 # coding: utf-8
 """@package synchronizer
 Last modification 202006 by Kevin Krieger, with help from Dr. David Themens who tested on Windows
+and provided required changes to sync a specific radar
 
 This script is designed to log on to the University of Saskatchewan globus
-SuperDARN mirror in order to check for and download new files for a specific pattern and data type 
+SuperDARN mirror in order to check for and download new files for a specific pattern and data type
 
 IMPORTANT: Before this script is run, there are a set of instructions which must be followed:
 ***
@@ -24,13 +25,13 @@ to globus, in order to get a refresh token. It will save the refresh token so th
 to the script can be automated (example: via cron).
 
 By default, this script will email you upon failure of the transfer, but not upon success.
-To change this behaviour, you need to simply change the 'notify_on_succeeded=False, 
+To change this behaviour, you need to simply change the 'notify_on_succeeded=False,
 notify_on_failed=True' values to True or False in the sync_files_from_list method.
 
-By default, there is a soft timeout of 30 seconds per file for the transfer. If this amount of time 
-is exceeded, the script will return, but the transfer is likely still happening. 
+By default, there is a soft timeout of 30 seconds per file for the transfer. If this amount of time
+is exceeded, the script will return, but the transfer is likely still happening.
 If you have a faster or slower connection, you may consider changing this value - it will not affect
-the transfer, only the amount of time the script waits until returning. 
+the transfer, only the amount of time the script waits until returning.
 To be sure about the status of your transfer, you can log into globus.org and view your transfers.
 
 The script will check the arguments and if there are errors with the
@@ -42,16 +43,15 @@ from __future__ import print_function
 import inspect
 from datetime import datetime
 from os.path import expanduser, isfile
-import sys
 import argparse
 import globus_sdk
 import time
 import sys
 
 if sys.version_info >= (3, 0):
-    PYTHON3=True
+    PYTHON3 = True
 else:
-    PYTHON3=False
+    PYTHON3 = False
 
 USER_HOME_DIRECTORY = expanduser("~")
 # The following is a path to a file that contains the globus transfer refresh tokens used
@@ -253,11 +253,11 @@ Examples:
             print("Globus Timeout error - REST request timed out.")
         except globus_sdk.NetworkError:
             print("Network error")
-    
+
     def get_first_globus_connect_personal_uuid(self):
-        """ Will search user's endpoints and retrieve the UUID of the first active globus connect 
-        personal endpoint. 
-        
+        """ Will search user's endpoints and retrieve the UUID of the first active globus connect
+        personal endpoint.
+
         :returns: UUID of first active globus connect personal endpoint """
 
         gcp_eps = self.transfer_client.endpoint_search(filter_scope='my-gcp-endpoints')
@@ -268,8 +268,8 @@ Examples:
             sys.exit("No endpoint found for Globus Connect Personal endpoint. Exiting")
 
     def get_superdarn_mirror_uuid(self):
-        """ Will search endpoints and retrieve the UUID of the SuperDARN mirror endpoint. 
-        
+        """ Will search endpoints and retrieve the UUID of the SuperDARN mirror endpoint.
+
         :returns: UUID of SuperDARN mirror endpoint """
 
         for ep in self.transfer_client.endpoint_search('SuperDARN mirror'):
@@ -279,8 +279,8 @@ Examples:
 
     def get_refresh_token_authorizer(self):
         """ Attempts to get an authorizer object that uses refresh tokens (for
-        automatic authentication). It requires a refresh token to work. 
-        
+        automatic authentication). It requires a refresh token to work.
+
         :returns: Globus SDK authorizer object """
 
         # Get client from globus sdk to act on
@@ -292,8 +292,8 @@ Examples:
 
     def get_client_secret_authorizer(self):
         """ Attempts to get an authorizer object that uses a client secret for authentication.
-        Not normally used. 
-        
+        Not normally used.
+
         :returns: Globus SDK authorizer object """
         client = globus_sdk.ConfidentialAppAuthClient(self.CLIENT_ID, self.CLIENT_SECRET)
         token_response = client.oauth2_client_credentials_tokens()
@@ -306,7 +306,7 @@ Examples:
 
     def get_auth_with_login(self):
         """ Attempts to get an authorizer object that requires manual authentication,
-        but will return a refresh token and save it to  a local file for future use. 
+        but will return a refresh token and save it to  a local file for future use.
         :returns: Globus SDK authorizer object """
 
         client = globus_sdk.NativeAppAuthClient(self.CLIENT_ID)
@@ -316,7 +316,7 @@ Examples:
         print('Please go to this URL and login: {0}'.format(authorize_url))
 
         # Handle both python 3 and python 2
-        if sys.version_info > (3, 0):
+        if PYTHON3:
             auth_code = input('Please enter the code you get after login here: ').strip()
         else:
             auth_code = raw_input('Please enter the code you get after login here: ').strip()
@@ -339,10 +339,10 @@ Examples:
 
     def get_transfer_client(self):
         """ Determines what type of authorizer to get in order to initialize the TransferClient
-        object which is used for many Globus SDK tasks (such as transferring files). Depending upon 
-        whether or not the user has a refresh token or a client secret, the refresh token 
-        authorizer, client secret authorizer or manual authorizer will be used. 
-        
+        object which is used for many Globus SDK tasks (such as transferring files). Depending upon
+        whether or not the user has a refresh token or a client secret, the refresh token
+        authorizer, client secret authorizer or manual authorizer will be used.
+
         :returns: Globus SDK Transfer Client object """
 
         if self.TRANSFER_RT is not None:
@@ -353,10 +353,10 @@ Examples:
             return globus_sdk.TransferClient(authorizer=self.get_auth_with_login())
 
     def sync_files_from_list(self, files_list, source_uuid=None, dest_uuid=None):
-        """ Takes a list of files to synchronize as well as source and destination endpoint UUIDs. 
-        It is hard coded to place the files in the correct YYYY/MM directories on the SuperDARN 
-        globus mirror, the default source and destination UUIDs are fine for 99% of usage. 
-        
+        """ Takes a list of files to synchronize as well as source and destination endpoint UUIDs.
+        It is hard coded to place the files in the correct YYYY/MM directories on the SuperDARN
+        globus mirror, the default source and destination UUIDs are fine for 99% of usage.
+
         :param files_list: python list of file names to synchronize
         :param source_uuid: UUID of the source endpoint of the files
         :param dest_uuid: UUID of the destination endpoint for the files
@@ -387,7 +387,7 @@ Examples:
 
 
 if __name__ == '__main__':
-    """ Open the transfer refresh token file if it exists and use it to initialize a Synchronizer 
+    """ Open the transfer refresh token file if it exists and use it to initialize a Synchronizer
     object. Then synchronize! """
     if isfile(TRANSFER_RT_FILENAME):
         with open(TRANSFER_RT_FILENAME) as f:
