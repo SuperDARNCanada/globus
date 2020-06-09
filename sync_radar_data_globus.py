@@ -55,7 +55,7 @@ else:
 
 USER_HOME_DIRECTORY = expanduser("~")
 # The following is a path to a file that contains the globus transfer refresh tokens used
-# for automatic authentication
+# for automatic authentication.
 TRANSFER_RT_FILENAME = USER_HOME_DIRECTORY + "/.globus_transfer_rt"
 
 # UUID of your endpoint, retrieve from endpoint info at: https://www.globus.org/app/endpoints
@@ -114,7 +114,8 @@ sync_radar_data_globus.py -y 2004 -m 02 -t dat -p 20040212 /home/username/200402
                                          formatter_class=argparse.RawTextHelpFormatter)
         parser.add_argument("-y", "--sync_year", type=int, default=self.cur_year,
                             help="Year you wish to sync data for. Default is current year")
-        parser.add_argument("-s", "--sync_station", type=str, help="Which radar to download")
+        parser.add_argument("-s", "--sync_station", type=str, default="*",
+                            help="Which radar to download data for, default all radars")
         parser.add_argument("-m", "--sync_month", type=int, default=self.cur_month,
                             help="Month you wish to sync data for. Default is current month")
         parser.add_argument("-p", "--sync_pattern", default='*',
@@ -179,7 +180,8 @@ Examples:
             elif 'dat' in self.data_type:
                 listing_pattern = "name:~*{}*dat.bz2".format(self.sync_pattern)
             elif 'fit' in self.data_type:
-                listing_pattern = "name:~*{}*{}.fitacf.bz2".format(self.sync_pattern, self.radar_code)
+                listing_pattern = "name:~*{}*{}.fitacf.bz2".format(self.sync_pattern,
+                                                                   self.radar_code)
             elif 'map' in self.data_type:
                 listing_pattern = "name:~*{}*map".format(self.sync_pattern)
             elif 'grid' in self.data_type:
@@ -288,7 +290,11 @@ Examples:
         client.oauth2_start_flow(refresh_tokens=True)
 
         # Get authorizer that handles the refreshing of token
-        return globus_sdk.RefreshTokenAuthorizer(self.TRANSFER_RT, client)
+        try:
+            return globus_sdk.RefreshTokenAuthorizer(self.TRANSFER_RT, client)
+        except globus_sdk.exc.AuthAPIError as e:
+            sys.exit("Transfer refresh token file {} is outdated, "
+                     "please remove and try running again".format(self.transfer_rt_filename))
 
     def get_client_secret_authorizer(self):
         """ Attempts to get an authorizer object that uses a client secret for authentication.
