@@ -236,7 +236,7 @@ Examples:
                                                        polling_interval=30)
             if not completed:
                 print("Transfer didn't complete yet but may still be running. Please check "
-                      "https://www.globus.org/app/activity if you want to check status of transfer")
+                      "https://app.globus.org/activity if you want to check status of transfer")
             else:
                 print("Transfer finished")
 
