@@ -47,6 +47,7 @@ import argparse
 import globus_sdk
 import time
 import sys
+import platform
 
 if sys.version_info >= (3, 0):
     PYTHON3 = True
@@ -61,10 +62,11 @@ TRANSFER_RT_FILENAME = USER_HOME_DIRECTORY + "/.globus_transfer_rt"
 # UUID of your endpoint, retrieve from endpoint info at: https://www.globus.org/app/endpoints
 # Or from the filesystem that globusconnectpersonal is installed on.
 # Note: this assumes you are running globusconnectpersonal & this script on the same filesystem
-# For Windows, use the following:
-# PERSONAL_UUID_FILENAME = USER_HOME_DIRECTORY + "\AppData\Local\Globus Connect\client-id.txt"
-# For Linux, use the following:
-PERSONAL_UUID_FILENAME = USER_HOME_DIRECTORY + "/.globusonline/lta/client-id.txt"
+
+if platform.system() in 'Windows':
+    PERSONAL_UUID_FILENAME = USER_HOME_DIRECTORY + "\AppData\Local\Globus Connect\client-id.txt"
+else:
+    PERSONAL_UUID_FILENAME = USER_HOME_DIRECTORY + "/.globusonline/lta/client-id.txt"
 
 if isfile(PERSONAL_UUID_FILENAME):
     with open(PERSONAL_UUID_FILENAME) as f:
