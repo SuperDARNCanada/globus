@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 """@package synchronizer
-Last modification 202006 by Kevin Krieger, with help from Dr. David Themens who tested on Windows
+Last modification 202007 by Kevin Krieger, with help from Dr. David Themens who tested on Windows
 and provided required changes to sync a specific radar
 
 This script is designed to log on to the University of Saskatchewan globus
@@ -84,7 +84,7 @@ class Synchronizer(object):
         """
         self.cur_year = datetime.now().year
         self.cur_month = datetime.now().month
-        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf25', 'fitacf_30',
+        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf_25', 'fitacf_30',
                                     'map', 'grid', 'summary']
 
         # CLIENT_ID and CLIENT_SECRET are retrieved from the "Manage Apps" section of
@@ -103,7 +103,10 @@ sync_radar_data_globus.py -y 2016 -m 05 /home/username/201605_rawacfs/
 sync_radar_data_globus.py -y 2004 -m 02 -t dat /home/username/200402_dat_files/
 sync_radar_data_globus.py -y 2014 -m 12 -p 20141201*sas /home/username/20141201_sas_rawacfs/
 sync_radar_data_globus.py -p rkn /home/username/cur_month_rkn_rawacfs/
-sync_radar_data_globus.py -y 2004 -m 02 -t dat -p 20040212 /home/username/20040212_dat_files/""",
+sync_radar_data_globus.py -y 2004 -m 02 -t dat -p 20040212 /home/username/20040212_dat_files/
+sync_radar_data_globus.py -y 2020 -m 01 -t fitacf_25 -p 20200101*inv /home/username/inv_fitacf/
+
+** NOTE that you must have appropriate permissions to access the FITACF 2.5 files **""",
                                          formatter_class=argparse.RawTextHelpFormatter)
         parser.add_argument("-y", "--sync_year", type=int, default=self.cur_year,
                             help="Year you wish to sync data for. Default is current year")
