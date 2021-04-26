@@ -84,8 +84,7 @@ class Synchronizer(object):
         """
         self.cur_year = datetime.now().year
         self.cur_month = datetime.now().month
-        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf_25', 'fitacf_30',
-                                    'map', 'grid', 'summary']
+        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf_25']
 
         # CLIENT_ID and CLIENT_SECRET are retrieved from the "Manage Apps" section of
         # https://auth.globus.org/v2/web/developers for this app. transfer_rt is retrieved
@@ -96,7 +95,9 @@ class Synchronizer(object):
         self.transfer_rt_filename = TRANSFER_RT_FILENAME
 
         parser = argparse.ArgumentParser(description="This script will sync a specified year, month"
-                                                     "and data type to your specified local dir.",
+                                                     "and data type to your specified local dir."
+                                                     "** Note that you may require quotation marks"
+                                                     "around the pattern. **",
                                          usage=""" Examples
 sync_radar_data_globus.py /home/username/current_month_rawacfs/
 sync_radar_data_globus.py -y 2016 -m 05 /home/username/201605_rawacfs/
@@ -105,6 +106,7 @@ sync_radar_data_globus.py -y 2014 -m 12 -p 20141201*sas /home/username/20141201_
 sync_radar_data_globus.py -p rkn /home/username/cur_month_rkn_rawacfs/
 sync_radar_data_globus.py -y 2004 -m 02 -t dat -p 20040212 /home/username/20040212_dat_files/
 sync_radar_data_globus.py -y 2020 -m 01 -t fitacf_25 -p 20200101*inv /home/username/inv_fitacf/
+sync_radar_data_globus.py -y 1993 -m 12 -t fit -p 19931201 /home/username/1993_dec_1_fit/
 
 ** NOTE that you must have appropriate permissions to access the FITACF 2.5 files **""",
                                          formatter_class=argparse.RawTextHelpFormatter)
@@ -176,14 +178,7 @@ Examples:
             elif 'dat' in self.data_type:
                 listing_pattern = "name:~*{}*dat.bz2".format(self.sync_pattern)
             elif 'fit' in self.data_type:
-                listing_pattern = "name:~*{}*{}.fitacf.bz2".format(self.sync_pattern,
-                                                                   self.radar_code)
-            elif 'map' in self.data_type:
-                listing_pattern = "name:~*{}*map".format(self.sync_pattern)
-            elif 'grid' in self.data_type:
-                listing_pattern = "name:~*{}*grid".format(self.sync_pattern)
-            elif 'summary' in self.data_type:
-                pass
+                listing_pattern = "name:~*{}*.fit.gz".format(self.sync_pattern)
             else:
                 pass
             print("Listing path: {path} on endpoint: {endpoint} with pattern: {pattern}".format(
