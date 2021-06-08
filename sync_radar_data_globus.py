@@ -61,7 +61,7 @@ else:
 
 if isfile(PERSONAL_UUID_FILENAME):
     with open(PERSONAL_UUID_FILENAME) as f:
-        PERSONAL_UUID = f.readline()
+        PERSONAL_UUID = f.readline().strip()
 else:
     raise FileNotFoundError("Client ID file not found: {}".format(PERSONAL_UUID_FILENAME))
 
@@ -179,6 +179,8 @@ Examples:
                 listing_pattern = "name:~*{}*dat.bz2".format(self.sync_pattern)
             elif 'fit' in self.data_type:
                 listing_pattern = "name:~*{}*.fit.gz".format(self.sync_pattern)
+            elif 'fitacf_25' in self.data_type:
+                listing_pattern = "name:~*{}*.fitacf.bz2".format(self.sync_pattern)
             else:
                 pass
             print("Listing path: {path} on endpoint: {endpoint} with pattern: {pattern}".format(
