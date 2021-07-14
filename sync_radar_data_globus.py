@@ -177,10 +177,10 @@ Examples:
                 listing_pattern = "name:~*{}*rawacf.bz2".format(self.sync_pattern)
             elif 'dat' in self.data_type:
                 listing_pattern = "name:~*{}*dat.bz2".format(self.sync_pattern)
-            elif 'fit' in self.data_type:
-                listing_pattern = "name:~*{}*.fit.gz".format(self.sync_pattern)
             elif 'fitacf_25' in self.data_type:
                 listing_pattern = "name:~*{}*.fitacf.bz2".format(self.sync_pattern)
+            elif 'fit' in self.data_type:
+                listing_pattern = "name:~*{}*.fit.gz".format(self.sync_pattern)
             else:
                 pass
             print("Listing path: {path} on endpoint: {endpoint} with pattern: {pattern}".format(
