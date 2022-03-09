@@ -84,7 +84,7 @@ class Synchronizer(object):
         """
         self.cur_year = datetime.now().year
         self.cur_month = datetime.now().month
-        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf_25']
+        self.possible_data_types = ['raw', 'dat', 'fit', 'fitacf_25', 'fitacf_30', 'despeck_fitacf_30']
 
         # CLIENT_ID and CLIENT_SECRET are retrieved from the "Manage Apps" section of
         # https://auth.globus.org/v2/web/developers for this app. transfer_rt is retrieved
@@ -179,6 +179,10 @@ Examples:
                 listing_pattern = "name:~*{}*dat.bz2".format(self.sync_pattern)
             elif 'fitacf_25' in self.data_type:
                 listing_pattern = "name:~*{}*.fitacf.bz2".format(self.sync_pattern)
+            elif 'fitacf_30' in self.data_type:
+                listing_pattern = "name:~*{}*.fitacf.bz2".format(self.sync_pattern)
+            elif 'despeck_fitacf_30' in self.data_type:
+                listing_pattern = "name:~*{}*.despeck.fitacf.bz2".format(self.sync_pattern)
             elif 'fit' in self.data_type:
                 listing_pattern = "name:~*{}*.fit.gz".format(self.sync_pattern)
             else:
