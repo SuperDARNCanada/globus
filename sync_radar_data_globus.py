@@ -65,7 +65,7 @@ if isfile(PERSONAL_UUID_FILENAME):
 else:
     raise FileNotFoundError("Client ID file not found: {}".format(PERSONAL_UUID_FILENAME))
 
-# Client ID retrieved from https://auth.globus.oorg/v2/web/developers
+# Client ID retrieved from https://auth.globus.org/v2/web/developers
 CLIENT_ID = '84d0b918-f49a-4136-a115-4206dafeba8a'
 
 
