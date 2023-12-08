@@ -36,6 +36,7 @@ from datetime import datetime
 from os.path import expanduser, isfile
 import argparse
 import globus_sdk
+from globus_sdk.scopes import TransferScopes
 import time
 import sys
 import platform
@@ -66,7 +67,8 @@ else:
     raise FileNotFoundError("Client ID file not found: {}".format(PERSONAL_UUID_FILENAME))
 
 # Client ID retrieved from https://auth.globus.org/v2/web/developers
-CLIENT_ID = '84d0b918-f49a-4136-a115-4206dafeba8a'
+# CLIENT_ID = '84d0b918-f49a-4136-a115-4206dafeba8a' Old from previous globus auth
+CLIENT_ID = 'bc9d5b7a-6592-4156-bfb8-aeb0fc4fb07e'
 
 
 class Synchronizer(object):
@@ -139,6 +141,9 @@ Examples:
         else:
             self.mirror_root_dir = "~/local_data"
         self.sanity_check()
+
+        # Potential consents required (new as of Globus enpoints v5 - see here: https://globus-sdk-python.readthedocs.io/en/stable/examples/minimal_transfer_script/index.html#example-minimal-transfer)
+        self.consents = []
 
         # Get a transfer client
         self.transfer_client = self.get_transfer_client()
@@ -272,7 +277,7 @@ Examples:
         :returns: UUID of SuperDARN mirror endpoint """
 
         for ep in self.transfer_client.endpoint_search('SuperDARN mirror'):
-            if 'kevin.krieger@usask.ca' in ep['contact_email'] and 'Official' in ep['description']:
+            if 'carley.martin@usask.ca' in ep['contact_email'] and 'updated SuperDARN Mirror using Globus v5' in ep['description']:
                 return ep['id']
         sys.exit("No endpoint found for SuperDARN mirror. Exiting")
 
@@ -307,13 +312,16 @@ Examples:
 
         return globus_sdk.AccessTokenAuthorizer(globus_transfer_token)
 
-    def get_auth_with_login(self):
+    def get_auth_with_login(self, consents=TransferScopes.all):
         """ Attempts to get an authorizer object that requires manual authentication,
         but will return a refresh token and save it to  a local file for future use.
+
+        :param: consents: globus sdk version 5 endpoints require consent scopes, this is the list
+                          of those that we will request, to access the endpoints and paths we need
         :returns: Globus SDK authorizer object """
 
         client = globus_sdk.NativeAppAuthClient(self.CLIENT_ID)
-        client.oauth2_start_flow(refresh_tokens=True)
+        client.oauth2_start_flow(refresh_tokens=True, requested_scopes=consents)
 
         authorize_url = client.oauth2_get_authorize_url()
         print('Please go to this URL and login: {0}'.format(authorize_url))
@@ -354,6 +362,27 @@ Examples:
             return globus_sdk.TransferClient(authorizer=self.get_client_secret_authorizer())
         else:
             return globus_sdk.TransferClient(authorizer=self.get_auth_with_login())
+
+    def check_for_consent_required(self, ep_uuid=None, path=None):
+        """Call this function with all endpoint uuids that you're going to use (source and destination)
+        along with all paths to be used, so that we get all the required consents at the beginning.
+        New and required as of Globus endpoints v5. This modifies the self.consents list by extending it
+        Defaults to the mirror endpoint and root directory, but can and should also be called on the
+        other endpoint(s) you want to transfer to/from.
+
+        :param: ep_uuid: UUID of the endpoint you want to find required consent scopes for
+        :param: path: the path on the endpoint you want to find the required consent scopes for """
+        if ep_uuid is None:
+            ep_uuid = self.mirror_uuid
+        if path is None:
+            path = self.mirror_root_dir
+        try:
+            self.transfer_client.operation_ls(ep_uuid, path=path)
+        # If there's an exception due to lack of consents, then add the consent scopes required
+        # to our list, so we can use them all a second time to login
+        except globus_sdk.TransferAPIError as err:
+            if err.info.consent_required:
+                self.consents.extend(err.info.consent_required.required_scopes)
 
     def sync_files_from_list(self, files_list, source_uuid=None, dest_uuid=None):
         """ Takes a list of files to synchronize as well as source and destination endpoint UUIDs.
@@ -397,5 +426,12 @@ if __name__ == '__main__':
             sync = Synchronizer(CLIENT_ID, transfer_rt=f.readline())
     else:
         sync = Synchronizer(CLIENT_ID)
+        # Now check for all consents required on the globus endpoint and personal endpoint
+        sync.check_for_consent_required()
+        sync.check_for_consent_required(PERSONAL_UUID, sync.sync_local_dir)
+        if sync.consents:
+            print("One of the endpoints being used requireds extra consent in order to be used, and you must login "
+                  "a second time (dumb I know) to get those consents.")
+        sync.get_auth_with_login(sync.consents)
 
     sync.synchronize()
