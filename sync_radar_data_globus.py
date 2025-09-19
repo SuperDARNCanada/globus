@@ -68,8 +68,8 @@ else:
 
 # Client ID retrieved from https://auth.globus.org/v2/web/developers
 # CLIENT_ID = '84d0b918-f49a-4136-a115-4206dafeba8a' Old from previous globus auth
-CLIENT_ID = 'bc9d5b7a-6592-4156-bfb8-aeb0fc4fb07e'
-
+# CLIENT_ID = 'bc9d5b7a-6592-4156-bfb8-aeb0fc4fb07e' Old app run by Saif
+CLIENT_ID = 'e70228d0-56a2-4d85-bf63-7fbccc92dcd3'  # current app run by Rem
 
 class Synchronizer(object):
     """ This is the synchronizer class. It knows about globus and will
